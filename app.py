@@ -33,7 +33,8 @@ def get_config():
                 "api_keys": {
                     "openai_api_key": "",
                     "gemini_api_key": ""
-                }
+                },
+                "dashboard_title": "My Dashboard"
             }
             save_config(g.config)
     return g.config
@@ -54,7 +55,9 @@ def teardown_config(exception):
 def index():
     """Renders the main dashboard page."""
     config = get_config()
-    return render_template('index.html', groups=config.get('groups', []))
+    return render_template('index.html', 
+                         groups=config.get('groups', []),
+                         dashboard_title=config.get('dashboard_title', 'My Dashboard'))
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -144,6 +147,20 @@ def delete_group():
         
     return redirect(url_for('settings'))
 
+@app.route('/get_api_keys', methods=['GET'])
+def get_api_keys():
+    """Gets existing API keys for display in settings."""
+    if not session.get('logged_in'):
+        return jsonify({'error': 'Not authorized'}), 401
+
+    config = get_config()
+    api_keys = config.get('api_keys', {})
+    
+    return jsonify({
+        'openai_api_key': api_keys.get('openai_api_key', ''),
+        'gemini_api_key': api_keys.get('gemini_api_key', '')
+    })
+
 @app.route('/save_api_keys', methods=['POST'])
 def save_api_keys():
     """Saves API keys for OpenAI and Gemini."""
@@ -168,6 +185,65 @@ def save_api_keys():
         config['api_keys']['gemini_api_key'] = gemini_key
 
     save_config(config)
+    return jsonify({'success': True})
+
+@app.route('/change_admin_password', methods=['POST'])
+def change_admin_password():
+    """Changes the admin password."""
+    if not session.get('logged_in'):
+        return jsonify({'error': 'Not authorized'}), 401
+
+    current_password = request.form.get('current_password')
+    new_password = request.form.get('new_password')
+
+    if not current_password or not new_password:
+        return jsonify({'error': 'Current password and new password are required'}), 400
+
+    config = get_config()
+    admin_creds = config.get('admin', {})
+
+    # Verify current password
+    if current_password != admin_creds.get('password'):
+        return jsonify({'error': 'Current password is incorrect'}), 400
+
+    # Validate new password length
+    if len(new_password) < 4:
+        return jsonify({'error': 'New password must be at least 4 characters long'}), 400
+
+    # Update password in config
+    config['admin']['password'] = new_password
+    save_config(config)
+    
+    return jsonify({'success': True})
+
+@app.route('/get_dashboard_title', methods=['GET'])
+def get_dashboard_title():
+    """Gets the current dashboard title."""
+    if not session.get('logged_in'):
+        return jsonify({'error': 'Not authorized'}), 401
+
+    config = get_config()
+    return jsonify({'dashboard_title': config.get('dashboard_title', 'My Dashboard')})
+
+@app.route('/save_dashboard_title', methods=['POST'])
+def save_dashboard_title():
+    """Saves the dashboard title."""
+    if not session.get('logged_in'):
+        return jsonify({'error': 'Not authorized'}), 401
+
+    dashboard_title = request.form.get('dashboard_title')
+    
+    if not dashboard_title:
+        return jsonify({'error': 'Dashboard title is required'}), 400
+
+    # Validate title length
+    if len(dashboard_title) > 50:
+        return jsonify({'error': 'Dashboard title must be 50 characters or less'}), 400
+
+    config = get_config()
+    config['dashboard_title'] = dashboard_title.strip()
+    save_config(config)
+    
     return jsonify({'success': True})
 
 @app.route('/chat', methods=['POST'])
@@ -295,4 +371,4 @@ if __name__ == '__main__':
     if not os.path.exists(os.path.join(app.static_folder, 'icons')):
         os.makedirs(os.path.join(app.static_folder, 'icons'))
         
-    app.run(debug=True)
+    app.run(debug=True, host='0.0.0.0', port=5065)

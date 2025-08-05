@@ -1,0 +1,298 @@
+import os
+import json
+import requests
+from flask import Flask, render_template, request, redirect, url_for, flash, session, g, jsonify
+from werkzeug.utils import secure_filename
+from openai import OpenAI
+import google.generativeai as genai
+
+# --- App Configuration ---
+app = Flask(__name__)
+app.config['SECRET_KEY'] = 'your-very-secret-key' # Replace with a real secret key
+app.config['UPLOAD_FOLDER'] = 'static/uploads'
+app.config['CONFIG_FILE'] = 'config.json'
+app.config['ALLOWED_EXTENSIONS'] = {'png', 'jpg', 'jpeg', 'gif', 'svg'}
+
+# --- Helper Functions ---
+
+def allowed_file(filename):
+    """Checks if the file extension is allowed."""
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
+
+def get_config():
+    """Reads the configuration data from the JSON file."""
+    if 'config' not in g:
+        try:
+            with open(app.config['CONFIG_FILE'], 'r') as f:
+                g.config = json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            g.config = {
+                "admin": {"username": "admin", "password": "admin"},
+                "groups": [],
+                "api_keys": {
+                    "openai_api_key": "",
+                    "gemini_api_key": ""
+                }
+            }
+            save_config(g.config)
+    return g.config
+
+def save_config(data):
+    """Saves the configuration data to the JSON file."""
+    with open(app.config['CONFIG_FILE'], 'w') as f:
+        json.dump(data, f, indent=4)
+
+@app.teardown_appcontext
+def teardown_config(exception):
+    """Closes the config on app context teardown."""
+    g.pop('config', None)
+
+# --- Routes ---
+
+@app.route('/')
+def index():
+    """Renders the main dashboard page."""
+    config = get_config()
+    return render_template('index.html', groups=config.get('groups', []))
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    """Handles the admin login."""
+    if request.method == 'POST':
+        config = get_config()
+        username = request.form['username']
+        password = request.form['password']
+        admin_creds = config.get('admin', {})
+
+        if username == admin_creds.get('username') and password == admin_creds.get('password'):
+            session['logged_in'] = True
+            flash('You were successfully logged in!', 'success')
+            return redirect(url_for('settings'))
+        else:
+            flash('Invalid credentials. Please try again.', 'danger')
+    return render_template('login.html')
+
+@app.route('/logout')
+def logout():
+    """Logs the admin out."""
+    session.pop('logged_in', None)
+    flash('You were successfully logged out.', 'success')
+    return redirect(url_for('index'))
+
+@app.route('/settings', methods=['GET'])
+def settings():
+    """Displays the settings page."""
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+    
+    config = get_config()
+    icon_path = os.path.join(app.static_folder, 'icons')
+    available_icons = []
+    if os.path.exists(icon_path):
+        available_icons = [f for f in os.listdir(icon_path) if os.path.isfile(os.path.join(icon_path, f))]
+    
+    return render_template('settings.html', 
+                           groups=config.get('groups', []), 
+                           available_icons=available_icons)
+
+@app.route('/add_group', methods=['POST'])
+def add_group():
+    """Handles the creation of a new group."""
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+
+    config = get_config()
+    group_name = request.form.get('group_name')
+    group_icon = request.form.get('group_icon')
+
+    if not group_name:
+        flash('Group name is required.', 'danger')
+        return redirect(url_for('settings'))
+
+    if any(g['name'].lower() == group_name.lower() for g in config['groups']):
+        flash('A group with this name already exists.', 'danger')
+        return redirect(url_for('settings'))
+
+    new_group = {
+        "name": group_name,
+        "icon": group_icon,
+        "links": []
+    }
+    config['groups'].append(new_group)
+    save_config(config)
+    flash(f'Group "{group_name}" has been added.', 'success')
+    return redirect(url_for('settings'))
+
+@app.route('/delete_group', methods=['POST'])
+def delete_group():
+    """Handles deleting a group."""
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+    
+    config = get_config()
+    group_name_to_delete = request.form.get('group_name')
+    
+    original_group_count = len(config['groups'])
+    config['groups'] = [group for group in config['groups'] if group['name'] != group_name_to_delete]
+
+    if len(config['groups']) < original_group_count:
+        save_config(config)
+        flash(f'Group "{group_name_to_delete}" has been deleted.', 'success')
+    else:
+        flash(f'Group "{group_name_to_delete}" not found.', 'danger')
+        
+    return redirect(url_for('settings'))
+
+@app.route('/save_api_keys', methods=['POST'])
+def save_api_keys():
+    """Saves API keys for OpenAI and Gemini."""
+    if not session.get('logged_in'):
+        return jsonify({'error': 'Not authorized'}), 401
+
+    openai_key = request.form.get('openai_api_key')
+    gemini_key = request.form.get('gemini_api_key')
+
+    config = get_config()
+    
+    # Ensure api_keys section exists
+    if 'api_keys' not in config:
+        config['api_keys'] = {
+            'openai_api_key': '',
+            'gemini_api_key': ''
+        }
+
+    if openai_key:
+        config['api_keys']['openai_api_key'] = openai_key
+    if gemini_key:
+        config['api_keys']['gemini_api_key'] = gemini_key
+
+    save_config(config)
+    return jsonify({'success': True})
+
+@app.route('/chat', methods=['POST'])
+def chat():
+    """Handles chat requests using chosen API."""
+    if not session.get('logged_in'):
+        return jsonify({'error': 'Not authorized'}), 401
+
+    config = get_config()
+    message = request.json.get('message')
+    service = request.json.get('service', 'openai')
+    
+    # Ensure api_keys section exists
+    if 'api_keys' not in config:
+        return jsonify({'error': 'API keys not configured. Please add them in Settings.'}), 400
+    
+    try:
+        if service == 'gemini-2.5-flash':
+            # Configure Gemini API
+            gemini_key = config['api_keys'].get('gemini_api_key')
+            if not gemini_key:
+                return jsonify({'error': 'Gemini API key not configured'}), 400
+            
+            genai.configure(api_key=gemini_key)
+            model = genai.GenerativeModel('gemini-2.5-flash')
+            
+            response = model.generate_content(message)
+            return jsonify({'message': response.text})
+            
+        else:  # OpenAI ChatGPT-4o
+            openai_key = config['api_keys'].get('openai_api_key')
+            if not openai_key:
+                return jsonify({'error': 'OpenAI API key not configured'}), 400
+            
+            client = OpenAI(api_key=openai_key)
+            
+            response = client.chat.completions.create(
+                model="gpt-4o",
+                messages=[
+                    {"role": "system", "content": "You are a helpful assistant for a dashboard application. Help users with technical questions, server management, troubleshooting, and general IT support."},
+                    {"role": "user", "content": message}
+                ],
+                max_tokens=500,
+                temperature=0.7
+            )
+            
+            return jsonify({'message': response.choices[0].message.content})
+            
+    except Exception as e:
+        print(f"Chat API Error: {str(e)}")
+        return jsonify({'error': f'API Error: {str(e)}'}), 500
+
+@app.route('/add_link', methods=['POST'])
+def add_link():
+    """Handles the creation of a new link within a group."""
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+
+    config = get_config()
+    group_name = request.form.get('group_name')
+    link_name = request.form.get('link_name')
+    link_url = request.form.get('link_url')
+    link_description = request.form.get('link_description')
+    icon_file = request.files.get('link_icon')
+
+    if not all([group_name, link_name, link_url]):
+        flash('Group, Link Name, and URL are required fields.', 'danger')
+        return redirect(url_for('settings'))
+
+    target_group = next((g for g in config['groups'] if g['name'] == group_name), None)
+    if not target_group:
+        flash('Group not found.', 'danger')
+        return redirect(url_for('settings'))
+
+    icon_filename = None
+    if icon_file and allowed_file(icon_file.filename):
+        filename = secure_filename(icon_file.filename)
+        save_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        icon_file.save(save_path)
+        icon_filename = filename
+
+    new_link = {
+        "name": link_name,
+        "url": link_url,
+        "description": link_description,
+        "icon": icon_filename
+    }
+    
+    target_group['links'].append(new_link)
+    save_config(config)
+    flash(f'Link "{link_name}" has been added to group "{group_name}".', 'success')
+    return redirect(url_for('settings'))
+
+@app.route('/delete_link', methods=['POST'])
+def delete_link():
+    """Handles deleting a link from a group."""
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+        
+    config = get_config()
+    group_name = request.form.get('group_name')
+    link_name_to_delete = request.form.get('link_name')
+
+    target_group = next((g for g in config['groups'] if g['name'] == group_name), None)
+    
+    if not target_group:
+        flash('Group not found.', 'danger')
+        return redirect(url_for('settings'))
+
+    original_link_count = len(target_group['links'])
+    target_group['links'] = [link for link in target_group['links'] if link['name'] != link_name_to_delete]
+
+    if len(target_group['links']) < original_link_count:
+        save_config(config)
+        flash(f'Link "{link_name_to_delete}" has been deleted from "{group_name}".', 'success')
+    else:
+        flash(f'Link "{link_name_to_delete}" not found in group "{group_name}".', 'danger')
+
+    return redirect(url_for('settings'))
+
+
+if __name__ == '__main__':
+    if not os.path.exists(app.config['UPLOAD_FOLDER']):
+        os.makedirs(app.config['UPLOAD_FOLDER'])
+    if not os.path.exists(os.path.join(app.static_folder, 'icons')):
+        os.makedirs(os.path.join(app.static_folder, 'icons'))
+        
+    app.run(debug=True)

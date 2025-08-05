@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Settings{% endblock %}
+
+{% block content %}
+<h1 class="text-4xl font-bold text-center mb-12 text-white">Admin Settings</h1>
+
+<!-- API Keys Section -->
+<div class="glass-card rounded-xl p-6 mb-8">
+    <h2 class="text-2xl font-bold mb-4 text-white border-b border-gray-600 pb-2">AI API Keys</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+            <label for="openai_api_key" class="block mb-2 text-sm font-medium text-gray-300">OpenAI API Key</label>
+            <input type="password" id="openai_api_key" class="glass-input text-sm rounded-lg w-full p-2.5" placeholder="sk-...">
+            <p class="text-xs text-gray-400 mt-1">For ChatGPT-4o integration</p>
+        </div>
+        <div>
+            <label for="gemini_api_key" class="block mb-2 text-sm font-medium text-gray-300">Google Gemini API Key</label>
+            <input type="password" id="gemini_api_key" class="glass-input text-sm rounded-lg w-full p-2.5" placeholder="AI...">
+            <p class="text-xs text-gray-400 mt-1">For Gemini-2.5-flash integration</p>
+        </div>
+    </div>
+    <button type="button" onclick="saveApiKeys()" class="mt-4 w-full text-white bg-purple-600 hover:bg-purple-700 font-medium rounded-lg text-sm px-5 py-2.5 text-center transition">Save API Keys</button>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+    <!-- Add New Group Section -->
+    <div class="glass-card rounded-xl p-6 h-fit">
+        <h2 class="text-2xl font-bold mb-4 text-white border-b border-gray-600 pb-2">Add New Group</h2>
+        <form action="{{ url_for('add_group') }}" method="POST">
+            <div class="mb-4">
+                <label for="group_name" class="block mb-2 text-sm font-medium text-gray-300">Group Name</label>
+                <input type="text" name="group_name" id="group_name" class="glass-input text-sm rounded-lg w-full p-2.5" required placeholder="Enter group name">
+            </div>
+            <div class="mb-4">
+                <label for="group_icon" class="block mb-2 text-sm font-medium text-gray-300">Group Icon</label>
+                <select name="group_icon" id="group_icon" class="glass-input text-sm rounded-lg w-full p-2.5">
+                    <option value="">No Icon</option>
+                    {% for icon in available_icons %}
+                    <option value="{{ icon }}">{{ icon }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit" class="w-full text-white bg-green-600 hover:bg-green-700 font-medium rounded-lg text-sm px-5 py-2.5 text-center transition">Add Group</button>
+        </form>
+    </div>
+
+    <!-- Add New Link Section -->
+    <div class="glass-card rounded-xl p-6 h-fit">
+        <h2 class="text-2xl font-bold mb-4 text-white border-b border-gray-600 pb-2">Add New Link</h2>
+        {% if groups %}
+        <form action="{{ url_for('add_link') }}" method="POST" enctype="multipart/form-data">
+            <div class="mb-4">
+                <label for="group_name_select" class="block mb-2 text-sm font-medium text-gray-300">Assign to Group</label>
+                <select name="group_name" id="group_name_select" class="glass-input text-sm rounded-lg w-full p-2.5" required>
+                    {% for group in groups %}
+                    <option value="{{ group.name }}">{{ group.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="mb-4">
+                <label for="link_name" class="block mb-2 text-sm font-medium text-gray-300">Link Name</label>
+                <input type="text" name="link_name" id="link_name" class="glass-input text-sm rounded-lg w-full p-2.5" required placeholder="Enter link name">
+            </div>
+            <div class="mb-4">
+                <label for="link_url" class="block mb-2 text-sm font-medium text-gray-300">URL</label>
+                <input type="url" name="link_url" id="link_url" placeholder="https://example.com" class="glass-input text-sm rounded-lg w-full p-2.5" required>
+            </div>
+            <div class="mb-4">
+                <label for="link_description" class="block mb-2 text-sm font-medium text-gray-300">Description</label>
+                <input type="text" name="link_description" id="link_description" class="glass-input text-sm rounded-lg w-full p-2.5" placeholder="Optional description">
+            </div>
+            <div class="mb-4">
+                <label for="link_icon" class="block mb-2 text-sm font-medium text-gray-300">Link Icon</label>
+                <input type="file" name="link_icon" id="link_icon" class="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+            </div>
+            <button type="submit" class="w-full text-white bg-blue-600 hover:bg-blue-700 font-medium rounded-lg text-sm px-5 py-2.5 text-center transition">Add Link</button>
+        </form>
+        {% else %}
+        <p class="text-gray-400">You need to create a group before you can add a link.</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Display Existing Groups and Links -->
+<div class="mt-12">
+    <h2 class="text-3xl font-bold text-center mb-8 text-white">Current Configuration</h2>
+    <div class="space-y-6">
+        {% for group in groups %}
+        <div class="glass-card rounded-xl p-4">
+            <div class="flex justify-between items-center border-b border-gray-700 pb-2 mb-3">
+                <h3 class="text-xl font-bold text-white flex items-center">
+                    {% if group.icon %}
+                        <img src="{{ url_for('static', filename='icons/' + group.icon) }}" class="w-6 h-6 mr-3" alt="{{ group.name }} icon">
+                    {% endif %}
+                    {{ group.name }}
+                </h3>
+                <form action="{{ url_for('delete_group') }}" method="POST" class="delete-form" onsubmit="return confirmDelete('group', '{{ group.name }}')">
+                    <input type="hidden" name="group_name" value="{{ group.name }}">
+                    <button type="submit" class="text-red-500 hover:text-red-400" title="Delete Group">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </form>
+            </div>
+            
+            <div class="space-y-2 pl-4">
+                {% for link in group.links %}
+                <div class="flex items-center justify-between p-2 rounded-md hover:bg-white/10">
+                    <div class="flex items-center min-w-0"> <!-- Key fix for text overlap -->
+                        {% if link.icon %}
+                        <img src="{{ url_for('static', filename='uploads/' + link.icon) }}" class="w-8 h-8 rounded-md mr-4 object-cover flex-shrink-0" alt="{{ link.name }} icon" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        <div class="w-8 h-8 rounded-md mr-4 bg-gray-700 items-center justify-center text-sm font-bold flex-shrink-0" style="display:none;">
+                            {{ link.name[0] }}
+                        </div>
+                        {% else %}
+                        <div class="w-8 h-8 rounded-md mr-4 bg-gray-700 flex items-center justify-center text-sm font-bold flex-shrink-0">
+                            {{ link.name[0] }}
+                        </div>
+                        {% endif %}
+                        <div class="min-w-0"> <!-- Key fix for text overlap -->
+                            <p class="font-semibold text-white truncate">{{ link.name }}</p>
+                            <p class="text-xs text-gray-400 truncate">{{ link.url }}</p>
+                        </div>
+                    </div>
+                    <form action="{{ url_for('delete_link') }}" method="POST" class="delete-form ml-4" onsubmit="return confirmDelete('link', '{{ link.name }}')">
+                        <input type="hidden" name="group_name" value="{{ group.name }}">
+                        <input type="hidden" name="link_name" value="{{ link.name }}">
+                        <button type="submit" class="text-red-500 hover:text-red-400" title="Delete Link">
+                            <i class="fas fa-times-circle"></i>
+                        </button>
+                    </form>
+                </div>
+                {% else %}
+                <p class="text-sm text-gray-400 italic">No links in this group.</p>
+                {% endfor %}
+            </div>
+        </div>
+        {% else %}
+        <div class="text-center py-10">
+            <p class="text-gray-400">No groups configured yet. Add one above to get started!</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+function saveApiKeys() {
+    const openaiKey = document.getElementById('openai_api_key').value;
+    const geminiKey = document.getElementById('gemini_api_key').value;
+    
+    const formData = new FormData();
+    if (openaiKey) formData.append('openai_api_key', openaiKey);
+    if (geminiKey) formData.append('gemini_api_key', geminiKey);
+    
+    fetch('/save_api_keys', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('API keys saved successfully!');
+        } else {
+            alert('Error saving API keys');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error saving API keys');
+    });
+}
+</script>
+{% endblock %}

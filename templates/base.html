@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Dashboard{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Improved font loading with fallbacks -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        /* Enhanced font loading with system fallbacks */
+        * {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+        }
+        
+        /* Custom glass effect with improved styling */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+        
+        .glass-card:hover {
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            transform: translateY(-2px);
+            box-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.45);
+        }
+        
+        /* Improved click effects */
+        a.glass-card:active {
+            transform: translateY(0px) scale(0.98);
+            transition: transform 0.1s ease;
+        }
+        
+        /* Enhanced body styling */
+        body {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            color: #e0e0e0;
+            font-weight: 400;
+            line-height: 1.6;
+        }
+        
+        /* Form improvements */
+        input, select, textarea {
+            font-family: inherit !important;
+        }
+        
+        /* Button hover improvements */
+        button {
+            font-family: inherit !important;
+            transition: all 0.3s ease;
+        }
+        
+        /* Prevent bouncing on form submission */
+        .delete-form {
+            display: inline-block;
+        }
+        
+        .delete-form button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+        }
+        
+        .delete-form button:hover {
+            background: rgba(239, 68, 68, 0.1);
+            transform: scale(1.1);
+        }
+        
+        .delete-form button:active {
+            transform: scale(0.95);
+        }
+        
+        /* Typography improvements */
+        h1, h2, h3, h4, h5, h6 {
+            font-weight: 600;
+            line-height: 1.2;
+            letter-spacing: -0.025em;
+        }
+        
+        /* Loading spinner for better UX */
+        .loading {
+            opacity: 0.7;
+            pointer-events: none;
+        }
+        
+        /* Glass input styling */
+        .glass-input {
+            background: rgba(255, 255, 255, 0.05) !important;
+            border: 1px solid rgba(255, 255, 255, 0.2) !important;
+            color: white !important;
+        }
+        
+        .glass-input:focus {
+            background: rgba(255, 255, 255, 0.08) !important;
+            border-color: rgba(59, 130, 246, 0.5) !important;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        
+        .glass-input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+        
+        /* Glass navigation buttons */
+        .glass-nav-button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 48px;
+            height: 48px;
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 12px;
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 18px;
+            text-decoration: none;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            box-shadow: 0 4px 16px 0 rgba(31, 38, 135, 0.25);
+        }
+        
+        .glass-nav-button:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            color: white;
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 0 8px 24px 0 rgba(31, 38, 135, 0.4);
+        }
+        
+        .glass-nav-button:active {
+            transform: translateY(0px) scale(0.98);
+            transition: transform 0.1s ease;
+        }
+        
+        /* Special styling for logout button */
+        .glass-nav-button.logout-btn:hover {
+            background: rgba(239, 68, 68, 0.15);
+            border-color: rgba(239, 68, 68, 0.3);
+            color: #ff6b6b;
+        }
+        
+        /* Responsive navigation */
+        @media (max-width: 640px) {
+            .glass-nav-button {
+                width: 44px;
+                height: 44px;
+                font-size: 16px;
+            }
+            
+            nav {
+                padding: 1rem;
+            }
+            
+            nav > div {
+                gap: 0.5rem;
+            }
+        }
+        
+        /* Chat bubble styles */
+        .glass-bubble-ai {
+            background: rgba(147, 51, 234, 0.15);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(147, 51, 234, 0.3);
+            border-radius: 12px 12px 12px 4px;
+            padding: 12px 16px;
+            max-width: 280px;
+        }
+        
+        .glass-bubble-user {
+            background: rgba(59, 130, 246, 0.15);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 12px 12px 4px 12px;
+            padding: 12px 16px;
+            max-width: 280px;
+            margin-left: auto;
+        }
+        
+        .glass-message-ai {
+            margin-bottom: 16px;
+        }
+        
+        .glass-message-user {
+            margin-bottom: 16px;
+            display: flex;
+            justify-content: flex-end;
+        }
+        
+        /* Chat scrollbar styling */
+        #chat-messages::-webkit-scrollbar {
+            width: 4px;
+        }
+        
+        #chat-messages::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+        }
+        
+        #chat-messages::-webkit-scrollbar-thumb {
+            background: rgba(147, 51, 234, 0.5);
+            border-radius: 2px;
+        }
+        
+        #chat-messages::-webkit-scrollbar-thumb:hover {
+            background: rgba(147, 51, 234, 0.7);
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <script>
+        // Confirm delete function
+        function confirmDelete(type, name) {
+            return confirm(`Are you sure you want to delete this ${type}: "${name}"?`);
+        }
+        
+        // Add loading state to forms
+        document.addEventListener('DOMContentLoaded', function() {
+            const forms = document.querySelectorAll('form');
+            forms.forEach(form => {
+                form.addEventListener('submit', function() {
+                    const submitBtn = form.querySelector('button[type="submit"]');
+                    if (submitBtn && !form.classList.contains('delete-form')) {
+                        submitBtn.classList.add('loading');
+                        submitBtn.disabled = true;
+                        const originalText = submitBtn.textContent;
+                        submitBtn.textContent = 'Loading...';
+                        
+                        // Re-enable after 3 seconds as fallback
+                        setTimeout(() => {
+                            submitBtn.classList.remove('loading');
+                            submitBtn.disabled = false;
+                            submitBtn.textContent = originalText;
+                        }, 3000);
+                    }
+                });
+            });
+        });
+    </script>
+    
+    <!-- Top Navigation Bar -->
+    <nav class="fixed top-0 right-0 z-50 p-6">
+        <div class="flex items-center space-x-3">
+            {% if session.logged_in %}
+                <!-- Home/Dashboard Icon -->
+                <a href="{{ url_for('index') }}" class="glass-nav-button" title="Dashboard">
+                    <i class="fas fa-home"></i>
+                </a>
+                <!-- Settings Icon -->
+                <a href="{{ url_for('settings') }}" class="glass-nav-button" title="Settings">
+                    <i class="fas fa-cog"></i>
+                </a>
+                <!-- Logout Icon -->
+                <a href="{{ url_for('logout') }}" class="glass-nav-button logout-btn" title="Logout">
+                    <i class="fas fa-sign-out-alt"></i>
+                </a>
+            {% else %}
+                <!-- Login Icon -->
+                <a href="{{ url_for('login') }}" class="glass-nav-button" title="Admin Login">
+                    <i class="fas fa-user-shield"></i>
+                </a>
+            {% endif %}
+        </div>
+    </nav>
+    
+    <div class="container mx-auto px-4 py-8">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="p-4 mb-4 text-sm text-white rounded-lg bg-{{ 'green' if category == 'success' else 'red' }}-500" role="alert">
+                      <span class="font-medium">{{ message }}</span>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </div>
+</body>
+</html>

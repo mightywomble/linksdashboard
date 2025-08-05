@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Login{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto mt-10">
+    <div class="glass-card rounded-xl p-8">
+        <h1 class="text-2xl font-bold text-center mb-6 text-white">Admin Login</h1>
+        <form method="POST" action="{{ url_for('login') }}">
+            <div class="mb-4">
+                <label for="username" class="block mb-2 text-sm font-medium text-gray-300">Username</label>
+                <input type="text" name="username" id="username" class="glass-input text-sm rounded-lg block w-full p-2.5" required placeholder="Enter username">
+            </div>
+            <div class="mb-6">
+                <label for="password" class="block mb-2 text-sm font-medium text-gray-300">Password</label>
+                <input type="password" name="password" id="password" class="glass-input text-sm rounded-lg block w-full p-2.5" required placeholder="Enter password">
+            </div>
+            <button type="submit" class="w-full text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:outline-none focus:ring-blue-800 font-medium rounded-lg text-sm px-5 py-2.5 text-center transition">Login</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

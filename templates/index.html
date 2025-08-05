@@ -6,16 +6,15 @@
 <!-- Chatbot Toggle Button -->
 {% if session.logged_in %}
 <div id="chatbot-toggle" class="fixed left-4 top-1/2 transform -translate-y-1/2 z-40 cursor-pointer">
-    <div class="glass-nav-button bg-purple-600 hover:bg-purple-700 text-white p-3 rounded-r-lg flex items-center space-x-2 transition-all duration-300">
+    <div class="glass-nav-button bg-purple-600 hover:bg-purple-700 text-white p-3 rounded-lg transition-all duration-300">
         <i class="fas fa-robot text-lg"></i>
-        <span class="text-sm font-medium whitespace-nowrap">Chatbot</span>
     </div>
 </div>
 {% endif %}
 
 <!-- Main Dashboard Content -->
 <div class="w-full">
-    <h1 class="text-4xl font-bold text-center mb-12 text-white">My Dashboard</h1>
+    <h1 class="text-4xl font-bold text-center mb-12 text-white">{{ dashboard_title or 'My Dashboard' }}</h1>
     
     <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">
 {% for group in groups %}
@@ -230,5 +229,60 @@ function removeTypingIndicator() {
         typingIndicator.remove();
     }
 }
+
+// Chatbot slide-in/out functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const chatbotToggle = document.getElementById('chatbot-toggle');
+    const chatbotPanel = document.getElementById('chatbot-panel');
+    const chatbotBackdrop = document.getElementById('chatbot-backdrop');
+    const chatbotClose = document.getElementById('chatbot-close');
+    
+    if (chatbotToggle && chatbotPanel && chatbotBackdrop) {
+        function openChatbot() {
+            chatbotPanel.classList.remove('translate-x-full');
+            chatbotBackdrop.classList.remove('opacity-0');
+            chatbotBackdrop.classList.remove('pointer-events-none');
+        }
+        
+        function closeChatbot() {
+            chatbotPanel.classList.add('translate-x-full');
+            chatbotBackdrop.classList.add('opacity-0');
+            setTimeout(() => chatbotBackdrop.classList.add('pointer-events-none'), 300);
+        }
+        
+        // Open chatbot when toggle button is clicked
+        chatbotToggle.addEventListener('click', (event) => {
+            event.stopPropagation();
+            openChatbot();
+        });
+        
+        // Close chatbot when backdrop is clicked
+        chatbotBackdrop.addEventListener('click', (event) => {
+            if (event.target === chatbotBackdrop) {
+                closeChatbot();
+            }
+        });
+        
+        // Close chatbot when close button is clicked
+        if (chatbotClose) {
+            chatbotClose.addEventListener('click', (event) => {
+                event.stopPropagation();
+                closeChatbot();
+            });
+        }
+        
+        // Prevent clicks inside the panel from closing it
+        chatbotPanel.addEventListener('click', (event) => {
+            event.stopPropagation();
+        });
+        
+        // Close chatbot when clicking anywhere outside the panel
+        document.addEventListener('click', (event) => {
+            if (!chatbotPanel.contains(event.target) && !chatbotToggle.contains(event.target)) {
+                closeChatbot();
+            }
+        });
+    }
+});
 </script>
 {% endblock %}

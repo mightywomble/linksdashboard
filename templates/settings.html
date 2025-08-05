@@ -7,20 +7,95 @@
 
 <!-- API Keys Section -->
 <div class="glass-card rounded-xl p-6 mb-8">
-    <h2 class="text-2xl font-bold mb-4 text-white border-b border-gray-600 pb-2">AI API Keys</h2>
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div class="flex items-center justify-between cursor-pointer" onclick="toggleSection('api-keys-content', 'api-keys-icon')">
+        <h2 class="text-2xl font-bold text-white">AI API Keys</h2>
+        <i id="api-keys-icon" class="fas fa-chevron-down text-gray-400 transition-transform duration-300" style="transform: rotate(180deg);"></i>
+    </div>
+    <div id="api-keys-content" class="border-t border-gray-600 pt-4 mt-4" style="display: none;">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
             <label for="openai_api_key" class="block mb-2 text-sm font-medium text-gray-300">OpenAI API Key</label>
-            <input type="password" id="openai_api_key" class="glass-input text-sm rounded-lg w-full p-2.5" placeholder="sk-...">
+            <div class="relative">
+                <input type="password" id="openai_api_key" class="glass-input text-sm rounded-lg w-full p-2.5 pr-12" placeholder="sk-...">
+                <button type="button" onclick="toggleApiKeyVisibility('openai_api_key')" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors">
+                    <i id="openai_api_key_icon" class="fas fa-eye"></i>
+                </button>
+            </div>
             <p class="text-xs text-gray-400 mt-1">For ChatGPT-4o integration</p>
         </div>
         <div>
             <label for="gemini_api_key" class="block mb-2 text-sm font-medium text-gray-300">Google Gemini API Key</label>
-            <input type="password" id="gemini_api_key" class="glass-input text-sm rounded-lg w-full p-2.5" placeholder="AI...">
+            <div class="relative">
+                <input type="password" id="gemini_api_key" class="glass-input text-sm rounded-lg w-full p-2.5 pr-12" placeholder="AI...">
+                <button type="button" onclick="toggleApiKeyVisibility('gemini_api_key')" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors">
+                    <i id="gemini_api_key_icon" class="fas fa-eye"></i>
+                </button>
+            </div>
             <p class="text-xs text-gray-400 mt-1">For Gemini-2.5-flash integration</p>
         </div>
+        </div>
+        <button type="button" onclick="saveApiKeys()" class="mt-4 w-full text-white bg-purple-600 hover:bg-purple-700 font-medium rounded-lg text-sm px-5 py-2.5 text-center transition">Save API Keys</button>
     </div>
-    <button type="button" onclick="saveApiKeys()" class="mt-4 w-full text-white bg-purple-600 hover:bg-purple-700 font-medium rounded-lg text-sm px-5 py-2.5 text-center transition">Save API Keys</button>
+</div>
+
+<!-- Dashboard Settings Section -->
+<div class="glass-card rounded-xl p-6 mb-8">
+    <div class="flex items-center justify-between cursor-pointer" onclick="toggleSection('dashboard-settings-content', 'dashboard-settings-icon')">
+        <h2 class="text-2xl font-bold text-white">Dashboard Settings</h2>
+        <i id="dashboard-settings-icon" class="fas fa-chevron-down text-gray-400 transition-transform duration-300" style="transform: rotate(180deg);"></i>
+    </div>
+    <div id="dashboard-settings-content" class="border-t border-gray-600 pt-4 mt-4" style="display: none;">
+        <div class="mb-6">
+            <label for="dashboard_title" class="block mb-2 text-sm font-medium text-gray-300">Dashboard Title</label>
+            <div class="flex space-x-2">
+                <input type="text" id="dashboard_title" class="glass-input text-sm rounded-lg flex-1 p-2.5" placeholder="My Dashboard" maxlength="50">
+                <button type="button" onclick="saveDashboardTitle()" class="text-white bg-blue-600 hover:bg-blue-700 font-medium rounded-lg text-sm px-4 py-2.5 transition">Save Title</button>
+            </div>
+            <p class="text-xs text-gray-400 mt-1">This will be displayed at the top of your homepage</p>
+        </div>
+    </div>
+</div>
+
+<!-- Change Admin Password Section -->
+<div class="glass-card rounded-xl p-6 mb-8">
+    <div class="flex items-center justify-between cursor-pointer" onclick="toggleSection('password-content', 'password-icon')">
+        <h2 class="text-2xl font-bold text-white">Change Admin Password</h2>
+        <i id="password-icon" class="fas fa-chevron-down text-gray-400 transition-transform duration-300" style="transform: rotate(180deg);"></i>
+    </div>
+    <div id="password-content" class="border-t border-gray-600 pt-4 mt-4" style="display: none;">
+        <form onsubmit="return changeAdminPassword(event)" class="space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+                <label for="current_password" class="block mb-2 text-sm font-medium text-gray-300">Current Password</label>
+                <div class="relative">
+                    <input type="password" id="current_password" class="glass-input text-sm rounded-lg w-full p-2.5 pr-12" placeholder="Enter current password" required>
+                    <button type="button" onclick="togglePasswordVisibility('current_password')" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors">
+                        <i id="current_password_icon" class="fas fa-eye"></i>
+                    </button>
+                </div>
+            </div>
+            <div>
+                <label for="new_password" class="block mb-2 text-sm font-medium text-gray-300">New Password</label>
+                <div class="relative">
+                    <input type="password" id="new_password" class="glass-input text-sm rounded-lg w-full p-2.5 pr-12" placeholder="Enter new password" required>
+                    <button type="button" onclick="togglePasswordVisibility('new_password')" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors">
+                        <i id="new_password_icon" class="fas fa-eye"></i>
+                    </button>
+                </div>
+            </div>
+            <div>
+                <label for="confirm_password" class="block mb-2 text-sm font-medium text-gray-300">Confirm New Password</label>
+                <div class="relative">
+                    <input type="password" id="confirm_password" class="glass-input text-sm rounded-lg w-full p-2.5 pr-12" placeholder="Confirm new password" required>
+                    <button type="button" onclick="togglePasswordVisibility('confirm_password')" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors">
+                        <i id="confirm_password_icon" class="fas fa-eye"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <button type="submit" class="w-full text-white bg-red-600 hover:bg-red-700 font-medium rounded-lg text-sm px-5 py-2.5 text-center transition">Change Password</button>
+        </form>
+    </div>
 </div>
 
 <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -144,13 +219,67 @@
 </div>
 
 <script>
+function toggleApiKeyVisibility(inputId) {
+    const input = document.getElementById(inputId);
+    const icon = document.getElementById(inputId + '_icon');
+    
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+    } else {
+        input.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+    }
+}
+
+function maskApiKey(key) {
+    if (!key || key.length < 8) return key;
+    return key.substring(0, 4) + '•'.repeat(key.length - 8) + key.substring(key.length - 4);
+}
+
+function loadExistingApiKeys() {
+    fetch('/get_api_keys')
+    .then(response => response.json())
+    .then(data => {
+        if (data.openai_api_key) {
+            const openaiInput = document.getElementById('openai_api_key');
+            openaiInput.value = data.openai_api_key;
+            openaiInput.dataset.originalValue = data.openai_api_key;
+            openaiInput.value = maskApiKey(data.openai_api_key);
+        }
+        if (data.gemini_api_key) {
+            const geminiInput = document.getElementById('gemini_api_key');
+            geminiInput.value = data.gemini_api_key;
+            geminiInput.dataset.originalValue = data.gemini_api_key;
+            geminiInput.value = maskApiKey(data.gemini_api_key);
+        }
+    })
+    .catch(error => {
+        console.error('Error loading API keys:', error);
+    });
+}
+
 function saveApiKeys() {
-    const openaiKey = document.getElementById('openai_api_key').value;
-    const geminiKey = document.getElementById('gemini_api_key').value;
+    const openaiInput = document.getElementById('openai_api_key');
+    const geminiInput = document.getElementById('gemini_api_key');
+    
+    // Use original values if they exist and input hasn't been modified
+    let openaiKey = openaiInput.value;
+    let geminiKey = geminiInput.value;
+    
+    // If the input contains masked characters, use the original value
+    if (openaiKey.includes('•') && openaiInput.dataset.originalValue) {
+        openaiKey = openaiInput.dataset.originalValue;
+    }
+    if (geminiKey.includes('•') && geminiInput.dataset.originalValue) {
+        geminiKey = geminiInput.dataset.originalValue;
+    }
     
     const formData = new FormData();
-    if (openaiKey) formData.append('openai_api_key', openaiKey);
-    if (geminiKey) formData.append('gemini_api_key', geminiKey);
+    if (openaiKey && !openaiKey.includes('•')) formData.append('openai_api_key', openaiKey);
+    if (geminiKey && !geminiKey.includes('•')) formData.append('gemini_api_key', geminiKey);
     
     fetch('/save_api_keys', {
         method: 'POST',
@@ -160,6 +289,7 @@ function saveApiKeys() {
     .then(data => {
         if (data.success) {
             alert('API keys saved successfully!');
+            loadExistingApiKeys(); // Reload and re-mask the keys
         } else {
             alert('Error saving API keys');
         }
@@ -169,5 +299,133 @@ function saveApiKeys() {
         alert('Error saving API keys');
     });
 }
+
+function togglePasswordVisibility(inputId) {
+    const input = document.getElementById(inputId);
+    const icon = document.getElementById(inputId + '_icon');
+    
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+    } else {
+        input.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+    }
+}
+
+function changeAdminPassword(event) {
+    event.preventDefault();
+    
+    const currentPassword = document.getElementById('current_password').value;
+    const newPassword = document.getElementById('new_password').value;
+    const confirmPassword = document.getElementById('confirm_password').value;
+    
+    // Validate passwords match
+    if (newPassword !== confirmPassword) {
+        alert('New passwords do not match!');
+        return false;
+    }
+    
+    // Validate password length
+    if (newPassword.length < 4) {
+        alert('New password must be at least 4 characters long!');
+        return false;
+    }
+    
+    const formData = new FormData();
+    formData.append('current_password', currentPassword);
+    formData.append('new_password', newPassword);
+    
+    fetch('/change_admin_password', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Admin password changed successfully!');
+            // Clear the form
+            document.getElementById('current_password').value = '';
+            document.getElementById('new_password').value = '';
+            document.getElementById('confirm_password').value = '';
+        } else {
+            alert('Error: ' + (data.error || 'Failed to change password'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error changing password');
+    });
+    
+    return false;
+}
+
+function saveDashboardTitle() {
+    const titleInput = document.getElementById('dashboard_title');
+    const title = titleInput.value.trim();
+    
+    if (!title) {
+        alert('Please enter a dashboard title!');
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('dashboard_title', title);
+    
+    fetch('/save_dashboard_title', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Dashboard title saved successfully!');
+        } else {
+            alert('Error: ' + (data.error || 'Failed to save dashboard title'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error saving dashboard title');
+    });
+}
+
+function loadDashboardTitle() {
+    fetch('/get_dashboard_title')
+    .then(response => response.json())
+    .then(data => {
+        if (data.dashboard_title) {
+            document.getElementById('dashboard_title').value = data.dashboard_title;
+        }
+    })
+    .catch(error => {
+        console.error('Error loading dashboard title:', error);
+    });
+}
+
+function toggleSection(contentId, iconId) {
+    const content = document.getElementById(contentId);
+    const icon = document.getElementById(iconId);
+    
+    if (content.style.display === 'none') {
+        content.style.display = 'block';
+        icon.classList.remove('fa-chevron-down');
+        icon.classList.add('fa-chevron-up');
+        icon.style.transform = 'rotate(0deg)';
+    } else {
+        content.style.display = 'none';
+        icon.classList.remove('fa-chevron-up');
+        icon.classList.add('fa-chevron-down');
+        icon.style.transform = 'rotate(180deg)';
+    }
+}
+
+// Load existing API keys and dashboard title when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    loadExistingApiKeys();
+    loadDashboardTitle();
+});
 </script>
 {% endblock %}

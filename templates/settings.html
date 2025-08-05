@@ -170,12 +170,35 @@
                     {% endif %}
                     {{ group.name }}
                 </h3>
-                <form action="{{ url_for('delete_group') }}" method="POST" class="delete-form" onsubmit="return confirmDelete('group', '{{ group.name }}')">
-                    <input type="hidden" name="group_name" value="{{ group.name }}">
-                    <button type="submit" class="text-red-500 hover:text-red-400" title="Delete Group">
-                        <i class="fas fa-trash-alt"></i>
+                <div class="flex items-center space-x-2">
+                    <!-- Edit Group Button -->
+                    <button type="button" onclick="showEditGroup('{{ group.name }}', '{{ group.icon or '' }}')" class="text-blue-500 hover:text-blue-400" title="Edit Group">
+                        <i class="fas fa-edit"></i>
                     </button>
-                </form>
+                    <!-- Move Up Button -->
+                    <form action="{{ url_for('move_group') }}" method="POST" class="inline">
+                        <input type="hidden" name="group_name" value="{{ group.name }}">
+                        <input type="hidden" name="direction" value="up">
+                        <button type="submit" class="text-gray-500 hover:text-gray-400" title="Move Up">
+                            <i class="fas fa-arrow-up"></i>
+                        </button>
+                    </form>
+                    <!-- Move Down Button -->
+                    <form action="{{ url_for('move_group') }}" method="POST" class="inline">
+                        <input type="hidden" name="group_name" value="{{ group.name }}">
+                        <input type="hidden" name="direction" value="down">
+                        <button type="submit" class="text-gray-500 hover:text-gray-400" title="Move Down">
+                            <i class="fas fa-arrow-down"></i>
+                        </button>
+                    </form>
+                    <!-- Delete Group Button -->
+                    <form action="{{ url_for('delete_group') }}" method="POST" class="delete-form inline" onsubmit="return confirmDelete('group', '{{ group.name }}')">
+                        <input type="hidden" name="group_name" value="{{ group.name }}">
+                        <button type="submit" class="text-red-500 hover:text-red-400" title="Delete Group">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </form>
+                </div>
             </div>
             
             <div class="space-y-2 pl-4">
@@ -197,13 +220,20 @@
                             <p class="text-xs text-gray-400 truncate">{{ link.url }}</p>
                         </div>
                     </div>
-                    <form action="{{ url_for('delete_link') }}" method="POST" class="delete-form ml-4" onsubmit="return confirmDelete('link', '{{ link.name }}')">
-                        <input type="hidden" name="group_name" value="{{ group.name }}">
-                        <input type="hidden" name="link_name" value="{{ link.name }}">
-                        <button type="submit" class="text-red-500 hover:text-red-400" title="Delete Link">
-                            <i class="fas fa-times-circle"></i>
+                    <div class="flex items-center space-x-2 ml-4">
+                        <!-- Edit Link Button -->
+                        <button type="button" onclick="showEditLinkModal('{{ group.name }}', '{{ link.name }}', '{{ link.url }}', '{{ link.description or '' }}', '{{ link.icon or '' }}')" class="text-blue-500 hover:text-blue-400" title="Edit Link">
+                            <i class="fas fa-edit"></i>
                         </button>
-                    </form>
+                        <!-- Delete Link Button -->
+                        <form action="{{ url_for('delete_link') }}" method="POST" class="delete-form inline" onsubmit="return confirmDelete('link', '{{ link.name }}')">
+                            <input type="hidden" name="group_name" value="{{ group.name }}">
+                            <input type="hidden" name="link_name" value="{{ link.name }}">
+                            <button type="submit" class="text-red-500 hover:text-red-400" title="Delete Link">
+                                <i class="fas fa-times-circle"></i>
+                            </button>
+                        </form>
+                    </div>
                 </div>
                 {% else %}
                 <p class="text-sm text-gray-400 italic">No links in this group.</p>
@@ -215,6 +245,61 @@
             <p class="text-gray-400">No groups configured yet. Add one above to get started!</p>
         </div>
         {% endfor %}
+    </div>
+</div>
+
+<!-- Edit Link Modal -->
+<div id="editLinkModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
+    <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="bg-white/80 backdrop-blur-lg rounded-xl p-6 w-full max-w-md">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold text-black">Edit Link</h3>
+                <button onclick="closeEditLinkModal()" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <form id="editLinkForm" enctype="multipart/form-data">
+                <input type="hidden" id="edit_group_name" name="group_name">
+                <input type="hidden" id="edit_old_name" name="old_name">
+                
+                <div class="mb-4">
+                    <label for="edit_link_name" class="block mb-2 text-sm font-medium text-black">Link Name</label>
+                    <input type="text" id="edit_link_name" name="new_name" class="glass-input text-sm rounded-lg w-full p-2.5" required>
+                </div>
+                
+                <div class="mb-4">
+                    <label for="edit_link_url" class="block mb-2 text-sm font-medium text-black">URL</label>
+                    <input type="url" id="edit_link_url" name="new_url" class="glass-input text-sm rounded-lg w-full p-2.5" required>
+                </div>
+                
+                <div class="mb-4">
+                    <label for="edit_link_description" class="block mb-2 text-sm font-medium text-black">Description</label>
+                    <input type="text" id="edit_link_description" name="new_description" class="glass-input text-sm rounded-lg w-full p-2.5">
+                </div>
+                
+                <div class="mb-4">
+                    <label for="edit_link_icon" class="block mb-2 text-sm font-medium text-black">Link Icon</label>
+                    <div class="flex items-center space-x-3 mb-2">
+                        <div id="current_icon_preview" class="w-8 h-8 rounded-md bg-gray-700 flex items-center justify-center text-sm font-bold flex-shrink-0">
+                            <!-- Current icon will be displayed here -->
+                        </div>
+                        <span id="current_icon_text" class="text-sm text-black">Current icon</span>
+                    </div>
+                    <input type="file" id="edit_link_icon" name="new_icon" class="block w-full text-sm text-black file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                    <p class="text-xs text-black mt-1">Leave empty to keep current icon</p>
+                </div>
+                
+                <div class="flex space-x-3">
+                    <button type="button" onclick="closeEditLinkModal()" class="flex-1 text-gray-700 bg-gray-200 hover:bg-gray-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center transition">
+                        Cancel
+                    </button>
+                    <button type="submit" class="flex-1 text-white bg-blue-600 hover:bg-blue-700 font-medium rounded-lg text-sm px-5 py-2.5 text-center transition">
+                        Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 
@@ -422,10 +507,88 @@ function toggleSection(contentId, iconId) {
     }
 }
 
+function showEditGroup(groupName, groupIcon) {
+    const newName = prompt('Enter new group name:', groupName);
+    if (newName && newName.trim() !== '' && newName !== groupName) {
+        const formData = new FormData();
+        formData.append('old_name', groupName);
+        formData.append('new_name', newName.trim());
+        formData.append('icon', groupIcon);
+        
+        fetch('/edit_group', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error: ' + (data.error || 'Failed to edit group'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error editing group');
+        });
+    }
+}
+
+function showEditLinkModal(groupName, linkName, linkUrl, linkDescription, linkIcon) {
+    document.getElementById('edit_group_name').value = groupName;
+    document.getElementById('edit_old_name').value = linkName;
+    document.getElementById('edit_link_name').value = linkName;
+    document.getElementById('edit_link_url').value = linkUrl;
+    document.getElementById('edit_link_description').value = linkDescription || '';
+
+    const iconPreview = document.getElementById('current_icon_preview');
+    iconPreview.innerHTML = linkIcon ? `<img src='/static/uploads/${linkIcon}' alt='${linkName} icon' class='w-8 h-8 rounded-md object-cover'>` : linkName[0];
+
+    document.getElementById('editLinkModal').classList.remove('hidden');
+}
+
+function closeEditLinkModal() {
+    document.getElementById('editLinkModal').classList.add('hidden');
+}
+
+function handleEditLinkFormSubmit(event) {
+    event.preventDefault();
+
+    const form = document.getElementById('editLinkForm');
+    const formData = new FormData(form);
+
+    fetch('/edit_link', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Error: ' + (data.error || 'Failed to edit link'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error editing link');
+    });
+}
+
+function confirmDelete(type, name) {
+    return confirm(`Are you sure you want to delete this ${type}: "${name}"?`);
+}
+
 // Load existing API keys and dashboard title when page loads
 document.addEventListener('DOMContentLoaded', function() {
     loadExistingApiKeys();
     loadDashboardTitle();
+    
+    // Ensure modal form submission is handled
+    const editLinkForm = document.getElementById('editLinkForm');
+    if (editLinkForm) {
+        editLinkForm.addEventListener('submit', handleEditLinkFormSubmit);
+    }
 });
 </script>
 {% endblock %}

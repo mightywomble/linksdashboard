@@ -1,3 +1,4 @@
+_pycache__/
 venv/
 config.json
 *.bak

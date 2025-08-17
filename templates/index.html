@@ -16,43 +16,82 @@
 <div class="w-full">
     <h1 class="text-4xl font-bold text-center mb-12 text-white">{{ dashboard_title or 'My Dashboard' }}</h1>
     
-    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">
-{% for group in groups %}
-<div class="glass-card rounded-xl p-4 flex flex-col">
-    <h2 class="text-xl font-bold mb-4 flex items-center text-white border-b border-gray-600 pb-2">
-        {% if group.icon %}
-            <img src="{{ url_for('static', filename='icons/' + group.icon) }}" class="w-6 h-6 mr-3" alt="{{ group.name }} icon">
-        {% endif %}
-        {{ group.name }}
-    </h2>
-    <div class="flex-grow space-y-3">
-        {% for link in group.links %}
-        <a href="{{ link.url }}" target="_blank" rel="noopener noreferrer" class="block glass-card rounded-lg p-3 hover:bg-white/20 transition duration-300">
-            <div class="flex items-center">
-                {% if link.icon %}
-                <img src="{{ url_for('static', filename='uploads/' + link.icon) }}" class="w-10 h-10 rounded-md mr-4 object-cover" alt="{{ link.name }} icon">
-                {% else %}
-                <div class="w-10 h-10 rounded-md mr-4 bg-gray-700 flex items-center justify-center text-xl font-bold">
-                    {{ link.name[0] }}
-                </div>
+    <!-- New 4-column layout -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" id="main-dashboard-grid">
+        <!-- Link Groups (3 columns max) -->
+        <div class="xl:col-span-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" id="link-columns">
+        {% for group in groups %}
+        <div class="glass-card rounded-xl p-4 flex flex-col">
+            <h2 class="text-xl font-bold mb-4 flex items-center text-white border-b border-gray-600 pb-2">
+                {% if group.icon %}
+                    <img src="{{ url_for('static', filename='icons/' + group.icon) }}" class="w-6 h-6 mr-3" alt="{{ group.name }} icon">
                 {% endif %}
-                <div>
-                    <h3 class="font-semibold text-white">{{ link.name }}</h3>
-                    <p class="text-xs text-gray-300">{{ link.description }}</p>
+                {{ group.name }}
+            </h2>
+            <div class="flex-grow space-y-3">
+                {% for link in group.links %}
+                <a href="{{ link.url }}" target="_blank" rel="noopener noreferrer" class="block glass-card rounded-lg p-3 hover:bg-white/20 transition duration-300">
+                    <div class="flex items-center">
+                        {% if link.icon %}
+                        <img src="{{ url_for('static', filename='uploads/' + link.icon) }}" class="w-10 h-10 rounded-md mr-4 object-cover" alt="{{ link.name }} icon">
+                        {% else %}
+                        <div class="w-10 h-10 rounded-md mr-4 bg-gray-700 flex items-center justify-center text-xl font-bold">
+                            {{ link.name[0] }}
+                        </div>
+                        {% endif %}
+                        <div>
+                            <h3 class="font-semibold text-white">{{ link.name }}</h3>
+                            <p class="text-xs text-gray-300">{{ link.description }}</p>
+                        </div>
+                    </div>
+                </a>
+                {% else %}
+                <p class="text-gray-400 text-sm">No links in this group yet.</p>
+                {% endfor %}
+            </div>
+        </div>
+        {% else %}
+        <div class="col-span-full text-center py-16">
+            <h2 class="text-2xl font-semibold text-gray-400">Your dashboard is empty!</h2>
+            <p class="text-gray-500 mt-2">Log in as an admin to add groups and links.</p>
+        </div>
+        {% endfor %}
+        </div>
+        
+        <!-- RSS Feed Column (4th column) -->
+        <div class="glass-card rounded-xl p-4 flex flex-col min-h-[400px]" id="rss-column">
+            <div class="flex items-center justify-between mb-4 border-b border-gray-600 pb-2">
+                <h2 class="text-xl font-bold text-white flex items-center">
+                    <i class="fas fa-rss mr-3 text-orange-500"></i>
+                    RSS Feeds
+                </h2>
+                <div class="flex space-x-2">
+                    <button id="rss-prev" class="glass-nav-button text-gray-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed" style="width: 32px; height: 32px; font-size: 14px;" title="Previous Feed">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <button id="rss-next" class="glass-nav-button text-gray-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed" style="width: 32px; height: 32px; font-size: 14px;" title="Next Feed">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
                 </div>
             </div>
-        </a>
-        {% else %}
-        <p class="text-gray-400 text-sm">No links in this group yet.</p>
-        {% endfor %}
-    </div>
-</div>
-{% else %}
-<div class="col-span-full text-center py-16">
-    <h2 class="text-2xl font-semibold text-gray-400">Your dashboard is empty!</h2>
-    <p class="text-gray-500 mt-2">Log in as an admin to add groups and links.</p>
-</div>
-{% endfor %}
+            
+            <div id="rss-content" class="flex-grow">
+                {% if rss_feeds %}
+                <div class="text-center text-gray-400 mt-8">
+                    <i class="fas fa-spinner fa-spin text-2xl mb-4"></i>
+                    <p>Loading RSS feeds...</p>
+                </div>
+                {% else %}
+                <div class="text-center text-gray-400 mt-8">
+                    <i class="fas fa-rss text-4xl mb-4 opacity-50"></i>
+                    <p class="text-lg font-semibold">No RSS Feeds</p>
+                    {% if session.logged_in %}
+                    <p class="text-sm mt-2">Add RSS feeds in <a href="{{ url_for('settings') }}" class="text-orange-400 hover:text-orange-300">Settings</a></p>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
     </div>
 </div>
 
@@ -113,6 +152,131 @@
 {% endif %}
 
 <script>
+let currentRssFeedPage = 0;
+let totalRssFeeds = 0;
+let rssFeedsData = [];
+
+// RSS Feed Management
+function loadRssFeeds() {
+    {% if rss_feeds %}
+    fetch('/get_rss_feeds')
+    .then(response => response.json())
+    .then(data => {
+        rssFeedsData = data.feeds;
+        totalRssFeeds = rssFeedsData.length;
+        if (totalRssFeeds > 0) {
+            currentRssFeedPage = 0;
+            displayRssFeed(rssFeedsData[0]);
+            updateRssNavigation();
+        } else {
+            displayNoRssFeeds();
+        }
+    })
+    .catch(error => {
+        console.error('Error loading RSS feeds:', error);
+        displayRssError();
+    });
+    {% endif %}
+}
+
+function displayRssFeed(feedData) {
+    const rssContent = document.getElementById('rss-content');
+    if (!feedData) {
+        displayRssError();
+        return;
+    }
+    
+    let entriesHtml = '';
+    feedData.entries.forEach(entry => {
+        entriesHtml += `
+            <div class="glass-card rounded-lg p-3 mb-3 hover:bg-white/10 transition duration-300">
+                <a href="${entry.link}" target="_blank" rel="noopener noreferrer" class="block">
+                    <h4 class="font-semibold text-white text-sm mb-2 line-clamp-2 leading-5">${entry.title}</h4>
+                    ${entry.summary ? `<p class="text-gray-300 text-xs line-clamp-3">${entry.summary}</p>` : ''}
+                </a>
+            </div>
+        `;
+    });
+    
+    rssContent.innerHTML = `
+        <div class="mb-4">
+            <a href="${feedData.link}" target="_blank" rel="noopener noreferrer" class="block">
+                <h3 class="text-lg font-bold text-white hover:text-orange-300 transition-colors">${feedData.title}</h3>
+            </a>
+            <p class="text-gray-400 text-xs mt-1">${feedData.name}</p>
+        </div>
+        <div class="space-y-2">
+            ${entriesHtml || '<p class="text-gray-400 text-sm">No recent entries</p>'}
+        </div>
+    `;
+}
+
+function displayNoRssFeeds() {
+    const rssContent = document.getElementById('rss-content');
+    rssContent.innerHTML = `
+        <div class="text-center text-gray-400 mt-8">
+            <i class="fas fa-rss text-4xl mb-4 opacity-50"></i>
+            <p class="text-lg font-semibold">No RSS Feeds</p>
+            {% if session.logged_in %}
+            <p class="text-sm mt-2">Add RSS feeds in <a href="{{ url_for('settings') }}" class="text-orange-400 hover:text-orange-300">Settings</a></p>
+            {% endif %}
+        </div>
+    `;
+}
+
+function displayRssError() {
+    const rssContent = document.getElementById('rss-content');
+    rssContent.innerHTML = `
+        <div class="text-center text-red-400 mt-8">
+            <i class="fas fa-exclamation-triangle text-4xl mb-4"></i>
+            <p class="text-lg font-semibold">Error Loading RSS Feeds</p>
+            <p class="text-sm mt-2">Please check your feeds configuration</p>
+        </div>
+    `;
+}
+
+function updateRssNavigation() {
+    const prevBtn = document.getElementById('rss-prev');
+    const nextBtn = document.getElementById('rss-next');
+    
+    if (totalRssFeeds <= 1) {
+        prevBtn.style.display = 'none';
+        nextBtn.style.display = 'none';
+        return;
+    }
+    
+    prevBtn.style.display = 'flex';
+    nextBtn.style.display = 'flex';
+    
+    prevBtn.disabled = currentRssFeedPage === 0;
+    nextBtn.disabled = currentRssFeedPage === totalRssFeeds - 1;
+    
+    if (prevBtn.disabled) {
+        prevBtn.classList.add('opacity-50', 'cursor-not-allowed');
+    } else {
+        prevBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+    }
+    
+    if (nextBtn.disabled) {
+        nextBtn.classList.add('opacity-50', 'cursor-not-allowed');
+    } else {
+        nextBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+    }
+}
+
+function navigateRss(direction) {
+    if (direction === 'prev' && currentRssFeedPage > 0) {
+        currentRssFeedPage--;
+        displayRssFeed(rssFeedsData[currentRssFeedPage]);
+        updateRssNavigation();
+    } else if (direction === 'next' && currentRssFeedPage < totalRssFeeds - 1) {
+        currentRssFeedPage++;
+        displayRssFeed(rssFeedsData[currentRssFeedPage]);
+        updateRssNavigation();
+    }
+}
+
+// Chat functions (keeping existing functionality)
 function handleChatKeyPress(event) {
     if (event.key === 'Enter') {
         sendMessage();
@@ -154,7 +318,6 @@ function sendMessage() {
         if (data.error) {
             addMessageToChat(`Error: ${data.error}`, 'ai');
         } else {
-            // Both APIs now return in the same format with 'message' field
             let responseText = data.message || 'No response received';
             addMessageToChat(responseText, 'ai');
         }
@@ -230,8 +393,21 @@ function removeTypingIndicator() {
     }
 }
 
-// Chatbot slide-in/out functionality
+// Initialize when page loads
 document.addEventListener('DOMContentLoaded', function() {
+    // Load RSS feeds
+    loadRssFeeds();
+    
+    // RSS navigation event listeners
+    const prevBtn = document.getElementById('rss-prev');
+    const nextBtn = document.getElementById('rss-next');
+    
+    if (prevBtn && nextBtn) {
+        prevBtn.addEventListener('click', () => navigateRss('prev'));
+        nextBtn.addEventListener('click', () => navigateRss('next'));
+    }
+    
+    // Chatbot functionality
     const chatbotToggle = document.getElementById('chatbot-toggle');
     const chatbotPanel = document.getElementById('chatbot-panel');
     const chatbotBackdrop = document.getElementById('chatbot-backdrop');
@@ -250,20 +426,17 @@ document.addEventListener('DOMContentLoaded', function() {
             setTimeout(() => chatbotBackdrop.classList.add('pointer-events-none'), 300);
         }
         
-        // Open chatbot when toggle button is clicked
         chatbotToggle.addEventListener('click', (event) => {
             event.stopPropagation();
             openChatbot();
         });
         
-        // Close chatbot when backdrop is clicked
         chatbotBackdrop.addEventListener('click', (event) => {
             if (event.target === chatbotBackdrop) {
                 closeChatbot();
             }
         });
         
-        // Close chatbot when close button is clicked
         if (chatbotClose) {
             chatbotClose.addEventListener('click', (event) => {
                 event.stopPropagation();
@@ -271,18 +444,53 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
         
-        // Prevent clicks inside the panel from closing it
         chatbotPanel.addEventListener('click', (event) => {
             event.stopPropagation();
         });
         
-        // Close chatbot when clicking anywhere outside the panel
         document.addEventListener('click', (event) => {
             if (!chatbotPanel.contains(event.target) && !chatbotToggle.contains(event.target)) {
                 closeChatbot();
             }
         });
     }
+    
+    // Adjust RSS column height to match link columns
+    adjustRssColumnHeight();
 });
+
+function adjustRssColumnHeight() {
+    const linkColumns = document.getElementById('link-columns');
+    const rssColumn = document.getElementById('rss-column');
+    
+    if (linkColumns && rssColumn) {
+        // Get the height of the link columns container
+        const linkColumnsHeight = linkColumns.offsetHeight;
+        if (linkColumnsHeight > 0) {
+            rssColumn.style.maxHeight = `${linkColumnsHeight}px`;
+        }
+    }
+}
+
+// Adjust height on window resize
+window.addEventListener('resize', adjustRssColumnHeight);
+
+// Add CSS for text truncation
+const style = document.createElement('style');
+style.textContent = `
+.line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+`;
+document.head.appendChild(style);
 </script>
 {% endblock %}

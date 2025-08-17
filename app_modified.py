@@ -653,4 +653,4 @@ if __name__ == '__main__':
     if not os.path.exists(os.path.join(app.static_folder, 'icons')):
         os.makedirs(os.path.join(app.static_folder, 'icons'))
         
-    app.run(debug=True, host='0.0.0.0', port=5066)
+    app.run(debug=True, host='0.0.0.0', port=5065)

@@ -1,0 +1,53 @@
+<!-- RSS Feeds Section -->
+<div class="glass-card rounded-xl p-6 mb-8">
+    <div class="flex items-center justify-between cursor-pointer" onclick="toggleSection('rss-feeds-content', 'rss-feeds-icon')">
+        <h2 class="text-2xl font-bold text-white">RSS Feeds</h2>
+        <i id="rss-feeds-icon" class="fas fa-chevron-down text-gray-400 transition-transform duration-300" style="transform: rotate(180deg);"></i>
+    </div>
+    <div id="rss-feeds-content" class="border-t border-gray-600 pt-4 mt-4" style="display: none;">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <!-- Add RSS Feed Form -->
+            <div>
+                <h3 class="text-lg font-semibold text-white mb-3">Add RSS Feed</h3>
+                <form action="{{ url_for('add_rss_feed') }}" method="POST">
+                    <div class="mb-4">
+                        <label for="feed_name" class="block mb-2 text-sm font-medium text-gray-300">Feed Name</label>
+                        <input type="text" name="feed_name" id="feed_name" class="glass-input text-sm rounded-lg w-full p-2.5" required placeholder="Enter feed name">
+                    </div>
+                    <div class="mb-4">
+                        <label for="feed_url" class="block mb-2 text-sm font-medium text-gray-300">Feed URL</label>
+                        <input type="url" name="feed_url" id="feed_url" class="glass-input text-sm rounded-lg w-full p-2.5" required placeholder="https://example.com/rss">
+                    </div>
+                    <button type="submit" class="w-full text-white bg-orange-600 hover:bg-orange-700 font-medium rounded-lg text-sm px-5 py-2.5 text-center transition">Add RSS Feed</button>
+                </form>
+            </div>
+            
+            <!-- Current RSS Feeds -->
+            <div>
+                <h3 class="text-lg font-semibold text-white mb-3">Current RSS Feeds</h3>
+                {% if rss_feeds %}
+                    <div class="space-y-2">
+                        {% for feed in rss_feeds %}
+                        <div class="flex items-center justify-between p-2 rounded-md hover:bg-white/10">
+                            <div class="min-w-0">
+                                <p class="font-semibold text-white truncate">{{ feed.name }}</p>
+                                <p class="text-xs text-gray-400 truncate">{{ feed.url }}</p>
+                            </div>
+                            <div class="flex items-center space-x-2 ml-4">
+                                <form action="{{ url_for('delete_rss_feed') }}" method="POST" class="delete-form inline" onsubmit="return confirmDelete('RSS feed', '{{ feed.name }}')">
+                                    <input type="hidden" name="feed_name" value="{{ feed.name }}">
+                                    <button type="submit" class="text-red-500 hover:text-red-400" title="Delete RSS Feed">
+                                        <i class="fas fa-times-circle"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-gray-400 text-sm italic">No RSS feeds configured yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>

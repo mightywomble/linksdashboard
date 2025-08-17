@@ -64,7 +64,7 @@ def fetch_rss_feed(feed_url):
         }
         
         # Get the latest 3 entries
-        for entry in feed.entries[:5]:
+        for entry in feed.entries[:3]:
             entry_data = {
                 'title': getattr(entry, 'title', 'Untitled'),
                 'link': getattr(entry, 'link', ''),

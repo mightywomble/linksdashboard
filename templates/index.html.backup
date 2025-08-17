@@ -65,25 +65,14 @@
                     <i class="fas fa-rss mr-3 text-orange-500"></i>
                     RSS Feeds
                 </h2>
-                <div class="flex items-center space-x-2">
-                    <!-- Auto-rotation toggle -->
-                    <button id="rss-auto-rotate" class="glass-nav-button text-orange-400 hover:text-orange-300" style="width: 32px; height: 32px; font-size: 12px;" title="Auto-rotate feeds every 30 seconds">
-                        <i class="fas fa-sync-alt" id="rotate-icon"></i>
+                <div class="flex space-x-2">
+                    <button id="rss-prev" class="glass-nav-button text-gray-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed" style="width: 32px; height: 32px; font-size: 14px;" title="Previous Feed">
+                        <i class="fas fa-chevron-left"></i>
                     </button>
-                    <div class="flex space-x-1">
-                        <button id="rss-prev" class="glass-nav-button text-gray-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed" style="width: 32px; height: 32px; font-size: 14px;" title="Previous Feed">
-                            <i class="fas fa-chevron-left"></i>
-                        </button>
-                        <button id="rss-next" class="glass-nav-button text-gray-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed" style="width: 32px; height: 32px; font-size: 14px;" title="Next Feed">
-                            <i class="fas fa-chevron-right"></i>
-                        </button>
-                    </div>
+                    <button id="rss-next" class="glass-nav-button text-gray-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed" style="width: 32px; height: 32px; font-size: 14px;" title="Next Feed">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
                 </div>
-            </div>
-            
-            <!-- Feed indicator dots -->
-            <div id="rss-indicators" class="flex justify-center space-x-2 mb-4" style="display: none;">
-                <!-- Dots will be populated by JavaScript -->
             </div>
             
             <div id="rss-content" class="flex-grow">
@@ -166,8 +155,6 @@
 let currentRssFeedPage = 0;
 let totalRssFeeds = 0;
 let rssFeedsData = [];
-let autoRotateInterval;
-let isAutoRotating = false;
 
 // RSS Feed Management
 function loadRssFeeds() {
@@ -181,11 +168,6 @@ function loadRssFeeds() {
             currentRssFeedPage = 0;
             displayRssFeed(rssFeedsData[0]);
             updateRssNavigation();
-            updateRssIndicators();
-            // Start auto-rotation by default if there are multiple feeds
-            if (totalRssFeeds > 1) {
-                startAutoRotation();
-            }
         } else {
             displayNoRssFeeds();
         }
@@ -210,7 +192,7 @@ function displayRssFeed(feedData) {
             <div class="glass-card rounded-lg p-3 mb-3 hover:bg-white/10 transition duration-300">
                 <a href="${entry.link}" target="_blank" rel="noopener noreferrer" class="block">
                     <h4 class="font-semibold text-white text-sm mb-2 line-clamp-2 leading-5">${entry.title}</h4>
-                    ${entry.summary ? `<p class="text-gray-300 text-xs line-clamp-2">${entry.summary}</p>` : ''}
+                    ${entry.summary ? `<p class="text-gray-300 text-xs line-clamp-3">${entry.summary}</p>` : ''}
                 </a>
             </div>
         `;
@@ -223,7 +205,7 @@ function displayRssFeed(feedData) {
             </a>
             <p class="text-gray-400 text-xs mt-1">${feedData.name}</p>
         </div>
-        <div class="space-y-2 max-h-80 overflow-y-auto">
+        <div class="space-y-2">
             ${entriesHtml || '<p class="text-gray-400 text-sm">No recent entries</p>'}
         </div>
     `;
@@ -282,87 +264,15 @@ function updateRssNavigation() {
     }
 }
 
-function updateRssIndicators() {
-    const indicators = document.getElementById('rss-indicators');
-    
-    if (totalRssFeeds <= 1) {
-        indicators.style.display = 'none';
-        return;
-    }
-    
-    indicators.style.display = 'flex';
-    indicators.innerHTML = '';
-    
-    for (let i = 0; i < totalRssFeeds; i++) {
-        const dot = document.createElement('div');
-        dot.className = `w-2 h-2 rounded-full transition-all duration-300 cursor-pointer ${
-            i === currentRssFeedPage ? 'bg-orange-400' : 'bg-gray-600 hover:bg-gray-500'
-        }`;
-        dot.onclick = () => {
-            currentRssFeedPage = i;
-            displayRssFeed(rssFeedsData[i]);
-            updateRssNavigation();
-            updateRssIndicators();
-        };
-        indicators.appendChild(dot);
-    }
-}
-
 function navigateRss(direction) {
     if (direction === 'prev' && currentRssFeedPage > 0) {
         currentRssFeedPage--;
         displayRssFeed(rssFeedsData[currentRssFeedPage]);
         updateRssNavigation();
-        updateRssIndicators();
     } else if (direction === 'next' && currentRssFeedPage < totalRssFeeds - 1) {
         currentRssFeedPage++;
         displayRssFeed(rssFeedsData[currentRssFeedPage]);
         updateRssNavigation();
-        updateRssIndicators();
-    }
-}
-
-function startAutoRotation() {
-    if (totalRssFeeds <= 1 || isAutoRotating) return;
-    
-    isAutoRotating = true;
-    const rotateBtn = document.getElementById('rss-auto-rotate');
-    const rotateIcon = document.getElementById('rotate-icon');
-    
-    rotateBtn.classList.remove('text-orange-400', 'hover:text-orange-300');
-    rotateBtn.classList.add('text-green-400', 'hover:text-green-300');
-    rotateIcon.classList.add('fa-spin');
-    
-    autoRotateInterval = setInterval(() => {
-        currentRssFeedPage = (currentRssFeedPage + 1) % totalRssFeeds;
-        displayRssFeed(rssFeedsData[currentRssFeedPage]);
-        updateRssNavigation();
-        updateRssIndicators();
-    }, 30000); // Rotate every 30 seconds
-}
-
-function stopAutoRotation() {
-    if (!isAutoRotating) return;
-    
-    isAutoRotating = false;
-    const rotateBtn = document.getElementById('rss-auto-rotate');
-    const rotateIcon = document.getElementById('rotate-icon');
-    
-    rotateBtn.classList.remove('text-green-400', 'hover:text-green-300');
-    rotateBtn.classList.add('text-orange-400', 'hover:text-orange-300');
-    rotateIcon.classList.remove('fa-spin');
-    
-    if (autoRotateInterval) {
-        clearInterval(autoRotateInterval);
-        autoRotateInterval = null;
-    }
-}
-
-function toggleAutoRotation() {
-    if (isAutoRotating) {
-        stopAutoRotation();
-    } else {
-        startAutoRotation();
     }
 }
 
@@ -491,21 +401,10 @@ document.addEventListener('DOMContentLoaded', function() {
     // RSS navigation event listeners
     const prevBtn = document.getElementById('rss-prev');
     const nextBtn = document.getElementById('rss-next');
-    const autoRotateBtn = document.getElementById('rss-auto-rotate');
     
     if (prevBtn && nextBtn) {
-        prevBtn.addEventListener('click', () => {
-            stopAutoRotation(); // Stop auto-rotation when manually navigating
-            navigateRss('prev');
-        });
-        nextBtn.addEventListener('click', () => {
-            stopAutoRotation(); // Stop auto-rotation when manually navigating
-            navigateRss('next');
-        });
-    }
-    
-    if (autoRotateBtn) {
-        autoRotateBtn.addEventListener('click', toggleAutoRotation);
+        prevBtn.addEventListener('click', () => navigateRss('prev'));
+        nextBtn.addEventListener('click', () => navigateRss('next'));
     }
     
     // Chatbot functionality

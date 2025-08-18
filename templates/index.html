@@ -59,16 +59,16 @@
         </div>
         
         <!-- RSS Feed Column (4th column) -->
-        <div class="glass-card rounded-xl p-4 flex flex-col min-h-[400px]" id="rss-column">
+        <div class="glass-card rounded-xl p-4 flex flex-col" id="rss-column" style="min-height: 400px;">
             <div class="flex items-center justify-between mb-4 border-b border-gray-600 pb-2">
-                <h2 class="text-xl font-bold text-white flex items-center">
+                <h2 class="text-xl font-bold text-white flex items-center" id="rss-header-title">
                     <i class="fas fa-rss mr-3 text-orange-500"></i>
-                    RSS Feeds
+                    <span id="rss-title-text">Latest Articles</span>
                 </h2>
                 <div class="flex items-center space-x-2">
-                    <!-- Auto-rotation toggle -->
-                    <button id="rss-auto-rotate" class="glass-nav-button text-orange-400 hover:text-orange-300" style="width: 32px; height: 32px; font-size: 12px;" title="Auto-rotate feeds every 30 seconds">
-                        <i class="fas fa-sync-alt" id="rotate-icon"></i>
+                    <!-- Refresh all feeds button -->
+                    <button id="rss-refresh" class="glass-nav-button text-blue-400 hover:text-blue-300" style="width: 32px; height: 32px; font-size: 12px;" title="Refresh all RSS feeds">
+                        <i class="fas fa-sync-alt" id="refresh-icon"></i>
                     </button>
                     <div class="flex space-x-1">
                         <button id="rss-prev" class="glass-nav-button text-gray-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed" style="width: 32px; height: 32px; font-size: 14px;" title="Previous Feed">
@@ -163,29 +163,35 @@
 {% endif %}
 
 <script>
-let currentRssFeedPage = 0;
+let currentRssFeedPage = -1; // -1 means "Latest Articles" view
 let totalRssFeeds = 0;
 let rssFeedsData = [];
+let latestArticles = [];
 let autoRotateInterval;
-let isAutoRotating = false;
 
 // RSS Feed Management
 function loadRssFeeds() {
     {% if rss_feeds %}
-    fetch('/get_rss_feeds')
-    .then(response => response.json())
-    .then(data => {
-        rssFeedsData = data.feeds;
+    // Load both regular feeds and latest articles
+    Promise.all([
+        fetch('/get_rss_feeds'),
+        fetch('/get_latest_articles')
+    ])
+    .then(async ([feedsResponse, articlesResponse]) => {
+        const feedsData = await feedsResponse.json().catch(() => ({ feeds: [] }));
+        const articlesData = await articlesResponse.json().catch(() => ({ articles: [] }));
+        
+        rssFeedsData = feedsData.feeds || [];
+        latestArticles = articlesData.articles || [];
         totalRssFeeds = rssFeedsData.length;
-        if (totalRssFeeds > 0) {
-            currentRssFeedPage = 0;
-            displayRssFeed(rssFeedsData[0]);
+        
+        if (totalRssFeeds > 0 || latestArticles.length > 0) {
+            currentRssFeedPage = -1; // Start with latest articles view
+            displayLatestArticles();
             updateRssNavigation();
             updateRssIndicators();
-            // Start auto-rotation by default if there are multiple feeds
-            if (totalRssFeeds > 1) {
-                startAutoRotation();
-            }
+            // Start auto-rotation
+            startAutoRotation();
         } else {
             displayNoRssFeeds();
         }
@@ -197,12 +203,126 @@ function loadRssFeeds() {
     {% endif %}
 }
 
+function refreshAllRssFeeds() {
+    const refreshBtn = document.getElementById('rss-refresh');
+    const refreshIcon = document.getElementById('refresh-icon');
+    
+    // Show spinning animation
+    refreshBtn.disabled = true;
+    refreshIcon.classList.add('fa-spin');
+    refreshBtn.classList.add('opacity-50');
+    
+    // Show loading message
+    const rssContent = document.getElementById('rss-content');
+    rssContent.innerHTML = `
+        <div class="text-center text-blue-400 mt-8">
+            <i class="fas fa-sync-alt fa-spin text-2xl mb-4"></i>
+            <p class="text-lg font-semibold">Refreshing RSS Feeds...</p>
+            <p class="text-sm mt-2">Fetching latest articles</p>
+        </div>
+    `;
+    
+    Promise.all([
+        fetch('/get_rss_feeds'),
+        fetch('/get_latest_articles')
+    ])
+    .then(async ([feedsResponse, articlesResponse]) => {
+        const feedsData = await feedsResponse.json().catch(() => ({ feeds: [] }));
+        const articlesData = await articlesResponse.json().catch(() => ({ articles: [] }));
+        
+        rssFeedsData = feedsData.feeds || [];
+        latestArticles = articlesData.articles || [];
+        totalRssFeeds = rssFeedsData.length;
+        
+        if (totalRssFeeds > 0 || latestArticles.length > 0) {
+            if (currentRssFeedPage === -1) {
+                displayLatestArticles();
+            } else {
+                if (currentRssFeedPage >= totalRssFeeds) {
+                    currentRssFeedPage = 0;
+                }
+                displayRssFeed(rssFeedsData[currentRssFeedPage]);
+            }
+            updateRssNavigation();
+            updateRssIndicators();
+        } else {
+            displayNoRssFeeds();
+        }
+        
+        // Reset refresh button
+        refreshBtn.disabled = false;
+        refreshIcon.classList.remove('fa-spin');
+        refreshBtn.classList.remove('opacity-50');
+        
+        // Show success feedback briefly
+        refreshBtn.classList.add('text-green-400');
+        setTimeout(() => {
+            refreshBtn.classList.remove('text-green-400');
+            refreshBtn.classList.add('text-blue-400');
+        }, 1000);
+    })
+    .catch(error => {
+        console.error('Error refreshing RSS feeds:', error);
+        displayRssError();
+        
+        // Reset refresh button on error
+        refreshBtn.disabled = false;
+        refreshIcon.classList.remove('fa-spin');
+        refreshBtn.classList.remove('opacity-50');
+        refreshBtn.classList.add('text-red-400');
+        setTimeout(() => {
+            refreshBtn.classList.remove('text-red-400');
+            refreshBtn.classList.add('text-blue-400');
+        }, 2000);
+    });
+}
+
+function displayLatestArticles() {
+    const rssContent = document.getElementById('rss-content');
+    const titleText = document.getElementById('rss-title-text');
+    titleText.textContent = 'Latest Articles';
+    
+    if (!latestArticles || latestArticles.length === 0) {
+        rssContent.innerHTML = `
+            <div class="text-center text-gray-400 mt-8">
+                <i class="fas fa-rss text-4xl mb-4 opacity-50"></i>
+                <p class="text-lg font-semibold">No Recent Articles</p>
+                <p class="text-sm mt-2">Check your RSS feed configuration</p>
+            </div>
+        `;
+        return;
+    }
+    
+    let articlesHtml = '';
+    latestArticles.forEach(article => {
+        articlesHtml += `
+            <div class="glass-card rounded-lg p-3 mb-3 hover:bg-white/10 transition duration-300">
+                <a href="${article.link}" target="_blank" rel="noopener noreferrer" class="block">
+                    <h4 class="font-semibold text-white text-sm mb-1 line-clamp-2 leading-5">${article.title}</h4>
+                    <p class="text-orange-400 text-xs mb-2">${article.feed_name}</p>
+                    ${article.summary ? `<p class="text-gray-300 text-xs line-clamp-2">${article.summary}</p>` : ''}
+                </a>
+            </div>
+        `;
+    });
+    
+    rssContent.innerHTML = `
+        <div class="space-y-2">
+            ${articlesHtml}
+        </div>
+    `;
+}
+
 function displayRssFeed(feedData) {
     const rssContent = document.getElementById('rss-content');
+    const titleText = document.getElementById('rss-title-text');
+    
     if (!feedData) {
         displayRssError();
         return;
     }
+    
+    titleText.textContent = feedData.name;
     
     let entriesHtml = '';
     feedData.entries.forEach(entry => {
@@ -221,9 +341,8 @@ function displayRssFeed(feedData) {
             <a href="${feedData.link}" target="_blank" rel="noopener noreferrer" class="block">
                 <h3 class="text-lg font-bold text-white hover:text-orange-300 transition-colors">${feedData.title}</h3>
             </a>
-            <p class="text-gray-400 text-xs mt-1">${feedData.name}</p>
         </div>
-        <div class="space-y-2 max-h-80 overflow-y-auto">
+        <div class="space-y-2">
             ${entriesHtml || '<p class="text-gray-400 text-sm">No recent entries</p>'}
         </div>
     `;
@@ -231,6 +350,9 @@ function displayRssFeed(feedData) {
 
 function displayNoRssFeeds() {
     const rssContent = document.getElementById('rss-content');
+    const titleText = document.getElementById('rss-title-text');
+    titleText.textContent = 'RSS Feeds';
+    
     rssContent.innerHTML = `
         <div class="text-center text-gray-400 mt-8">
             <i class="fas fa-rss text-4xl mb-4 opacity-50"></i>
@@ -244,6 +366,9 @@ function displayNoRssFeeds() {
 
 function displayRssError() {
     const rssContent = document.getElementById('rss-content');
+    const titleText = document.getElementById('rss-title-text');
+    titleText.textContent = 'RSS Feeds';
+    
     rssContent.innerHTML = `
         <div class="text-center text-red-400 mt-8">
             <i class="fas fa-exclamation-triangle text-4xl mb-4"></i>
@@ -257,7 +382,7 @@ function updateRssNavigation() {
     const prevBtn = document.getElementById('rss-prev');
     const nextBtn = document.getElementById('rss-next');
     
-    if (totalRssFeeds <= 1) {
+    if (totalRssFeeds <= 0) {
         prevBtn.style.display = 'none';
         nextBtn.style.display = 'none';
         return;
@@ -266,7 +391,9 @@ function updateRssNavigation() {
     prevBtn.style.display = 'flex';
     nextBtn.style.display = 'flex';
     
-    prevBtn.disabled = currentRssFeedPage === 0;
+    // Previous button: disabled if we're at the latest articles view (-1)
+    prevBtn.disabled = currentRssFeedPage === -1;
+    // Next button: disabled if we're at the last feed
     nextBtn.disabled = currentRssFeedPage === totalRssFeeds - 1;
     
     if (prevBtn.disabled) {
@@ -285,7 +412,7 @@ function updateRssNavigation() {
 function updateRssIndicators() {
     const indicators = document.getElementById('rss-indicators');
     
-    if (totalRssFeeds <= 1) {
+    if (totalRssFeeds <= 0) {
         indicators.style.display = 'none';
         return;
     }
@@ -293,11 +420,27 @@ function updateRssIndicators() {
     indicators.style.display = 'flex';
     indicators.innerHTML = '';
     
+    // Add dot for "Latest Articles" view
+    const latestDot = document.createElement('div');
+    latestDot.className = `w-2 h-2 rounded-full transition-all duration-300 cursor-pointer ${
+        currentRssFeedPage === -1 ? 'bg-orange-400' : 'bg-gray-600 hover:bg-gray-500'
+    }`;
+    latestDot.title = 'Latest Articles';
+    latestDot.onclick = () => {
+        currentRssFeedPage = -1;
+        displayLatestArticles();
+        updateRssNavigation();
+        updateRssIndicators();
+    };
+    indicators.appendChild(latestDot);
+    
+    // Add dots for individual feeds
     for (let i = 0; i < totalRssFeeds; i++) {
         const dot = document.createElement('div');
         dot.className = `w-2 h-2 rounded-full transition-all duration-300 cursor-pointer ${
             i === currentRssFeedPage ? 'bg-orange-400' : 'bg-gray-600 hover:bg-gray-500'
         }`;
+        dot.title = rssFeedsData[i] ? rssFeedsData[i].name : `Feed ${i + 1}`;
         dot.onclick = () => {
             currentRssFeedPage = i;
             displayRssFeed(rssFeedsData[i]);
@@ -309,61 +452,50 @@ function updateRssIndicators() {
 }
 
 function navigateRss(direction) {
-    if (direction === 'prev' && currentRssFeedPage > 0) {
-        currentRssFeedPage--;
-        displayRssFeed(rssFeedsData[currentRssFeedPage]);
-        updateRssNavigation();
-        updateRssIndicators();
-    } else if (direction === 'next' && currentRssFeedPage < totalRssFeeds - 1) {
-        currentRssFeedPage++;
-        displayRssFeed(rssFeedsData[currentRssFeedPage]);
-        updateRssNavigation();
-        updateRssIndicators();
+    if (direction === 'prev') {
+        if (currentRssFeedPage > -1) {
+            currentRssFeedPage--;
+            if (currentRssFeedPage === -1) {
+                displayLatestArticles();
+            } else {
+                displayRssFeed(rssFeedsData[currentRssFeedPage]);
+            }
+            updateRssNavigation();
+            updateRssIndicators();
+        }
+    } else if (direction === 'next') {
+        if (currentRssFeedPage < totalRssFeeds - 1) {
+            currentRssFeedPage++;
+            displayRssFeed(rssFeedsData[currentRssFeedPage]);
+            updateRssNavigation();
+            updateRssIndicators();
+        }
     }
 }
 
 function startAutoRotation() {
-    if (totalRssFeeds <= 1 || isAutoRotating) return;
-    
-    isAutoRotating = true;
-    const rotateBtn = document.getElementById('rss-auto-rotate');
-    const rotateIcon = document.getElementById('rotate-icon');
-    
-    rotateBtn.classList.remove('text-orange-400', 'hover:text-orange-300');
-    rotateBtn.classList.add('text-green-400', 'hover:text-green-300');
-    rotateIcon.classList.add('fa-spin');
+    if (totalRssFeeds <= 0) return;
     
     autoRotateInterval = setInterval(() => {
-        currentRssFeedPage = (currentRssFeedPage + 1) % totalRssFeeds;
-        displayRssFeed(rssFeedsData[currentRssFeedPage]);
+        if (currentRssFeedPage === -1) {
+            // Move from Latest Articles to first feed
+            currentRssFeedPage = 0;
+        } else {
+            // Move to next feed, or back to Latest Articles
+            currentRssFeedPage++;
+            if (currentRssFeedPage >= totalRssFeeds) {
+                currentRssFeedPage = -1;
+            }
+        }
+        
+        if (currentRssFeedPage === -1) {
+            displayLatestArticles();
+        } else {
+            displayRssFeed(rssFeedsData[currentRssFeedPage]);
+        }
         updateRssNavigation();
         updateRssIndicators();
     }, 30000); // Rotate every 30 seconds
-}
-
-function stopAutoRotation() {
-    if (!isAutoRotating) return;
-    
-    isAutoRotating = false;
-    const rotateBtn = document.getElementById('rss-auto-rotate');
-    const rotateIcon = document.getElementById('rotate-icon');
-    
-    rotateBtn.classList.remove('text-green-400', 'hover:text-green-300');
-    rotateBtn.classList.add('text-orange-400', 'hover:text-orange-300');
-    rotateIcon.classList.remove('fa-spin');
-    
-    if (autoRotateInterval) {
-        clearInterval(autoRotateInterval);
-        autoRotateInterval = null;
-    }
-}
-
-function toggleAutoRotation() {
-    if (isAutoRotating) {
-        stopAutoRotation();
-    } else {
-        startAutoRotation();
-    }
 }
 
 // Chat functions (keeping existing functionality)
@@ -491,21 +623,15 @@ document.addEventListener('DOMContentLoaded', function() {
     // RSS navigation event listeners
     const prevBtn = document.getElementById('rss-prev');
     const nextBtn = document.getElementById('rss-next');
-    const autoRotateBtn = document.getElementById('rss-auto-rotate');
+    const refreshBtn = document.getElementById('rss-refresh');
     
     if (prevBtn && nextBtn) {
-        prevBtn.addEventListener('click', () => {
-            stopAutoRotation(); // Stop auto-rotation when manually navigating
-            navigateRss('prev');
-        });
-        nextBtn.addEventListener('click', () => {
-            stopAutoRotation(); // Stop auto-rotation when manually navigating
-            navigateRss('next');
-        });
+        prevBtn.addEventListener('click', () => navigateRss('prev'));
+        nextBtn.addEventListener('click', () => navigateRss('next'));
     }
     
-    if (autoRotateBtn) {
-        autoRotateBtn.addEventListener('click', toggleAutoRotation);
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', refreshAllRssFeeds);
     }
     
     // Chatbot functionality
@@ -568,7 +694,7 @@ function adjustRssColumnHeight() {
         // Get the height of the link columns container
         const linkColumnsHeight = linkColumns.offsetHeight;
         if (linkColumnsHeight > 0) {
-            rssColumn.style.maxHeight = `${linkColumnsHeight}px`;
+            rssColumn.style.height = `${linkColumnsHeight}px`;
         }
     }
 }
